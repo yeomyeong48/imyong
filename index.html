@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🐼 렛서판다 임용 공부</title>
+
+<style>
+body{
+  margin:0; font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;
+  background:#fff6ec; color:#5d4037;
+}
+.hidden{display:none;}
+.center{
+  min-height:100vh; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:20px;
+}
+.btn{
+  padding:14px 22px; border-radius:20px; border:none;
+  background:#ff8a65; color:#fff; font-weight:700;
+  cursor:pointer;
+}
+.btn.secondary{background:#ffd180; color:#5d4037;}
+header{
+  background:#fff; padding:14px 18px;
+  box-shadow:0 2px 6px rgba(0,0,0,.08);
+}
+.container{max-width:900px; margin:20px auto; padding:0 16px;}
+.menu{display:flex; gap:12px; justify-content:center; flex-wrap:wrap;}
+.card{
+  background:#fff; border-radius:22px; padding:20px;
+  box-shadow:0 10px 20px rgba(0,0,0,.08);
+  margin-top:20px;
+}
+select, textarea, input{
+  width:100%; padding:10px; margin:6px 0 14px;
+  border-radius:14px; border:1px solid #ddd;
+}
+</style>
+</head>
+
+<body>
+
+<!-- 시작 화면 -->
+<div id="start" class="center">
+  <img src="https://upload.wikimedia.org/wikipedia/commons/5/50/RedPandaFullBody.JPG" width="160">
+  <h1>🐼 렛서판다 임용 공부</h1>
+  <button class="btn" id="startBtn">공부하기</button>
+</div>
+
+<!-- 메인 -->
+<div id="main" class="hidden">
+<header><h2>🐾 오늘도 임용 공부!</h2></header>
+
+<div class="container">
+  <div class="menu">
+    <button class="btn" data-page="solve">문제 풀기</button>
+    <button class="btn secondary" data-page="add">문제 만들기</button>
+    <button class="btn secondary" data-page="view">문제 보기</button>
+  </div>
+
+  <!-- 문제 풀기 -->
+  <div id="solve" class="card hidden">
+    <h3>📝 문제 풀기</h3>
+
+    <label>과목</label>
+    <select id="quizSubject"></select>
+
+    <label>단원</label>
+    <select id="quizUnit"></select>
+
+    <button class="btn" id="startUnit">단원 풀이</button>
+    <button class="btn secondary" id="startRandom">랜덤 🎲</button>
+
+    <hr>
+
+    <h4 id="question">문제</h4>
+    <textarea id="answerInput" rows="3"></textarea>
+    <button class="btn" id="checkBtn">정답 확인</button>
+    <p id="result"></p>
+  </div>
+
+  <!-- 문제 만들기 -->
+  <div id="add" class="card hidden">
+    <h3>➕ 문제 만들기</h3>
+
+    <label>과목</label>
+    <select id="addSubject">
+      <option>동양사개론</option>
+      <option>서양사개론</option>
+      <option>시민의 한국사</option>
+    </select>
+
+    <label>기존 단원</label>
+    <select id="addUnit"></select>
+
+    <input id="newUnit" placeholder="새 단원 직접 입력">
+
+    <textarea id="newQ" rows="3" placeholder="문제"></textarea>
+    <textarea id="newA" rows="2" placeholder="정답 키워드"></textarea>
+
+    <button class="btn" id="saveBtn">저장 🐾</button>
+  </div>
+
+  <!-- 문제 보기 -->
+  <div id="view" class="card hidden">
+    <h3>📂 문제 보기</h3>
+    <div id="list"></div>
+  </div>
+</div>
+</div>
+
+<script>
+// ===== 시작 버튼 =====
+startBtn.onclick = () => {
+  start.classList.add('hidden');
+  main.classList.remove('hidden');
+};
+
+// ===== 메뉴 전환 =====
+document.querySelectorAll('.menu button').forEach(btn=>{
+  btn.onclick = ()=>{
+    ['solve','add','view'].forEach(id=>{
+      document.getElementById(id).classList.add('hidden');
+    });
+    document.getElementById(btn.dataset.page).classList.remove('hidden');
+  };
+});
+
+// ===== 데이터 =====
+const UNIT_KEY = 'units';
+const Q_KEY = 'questions';
+
+let unitData = JSON.parse(localStorage.getItem(UNIT_KEY)) || {
+  '동양사개론': [],
+  '서양사개론': [],
+  '시민의 한국사': []
+};
+
+let questions = JSON.parse(localStorage.getItem(Q_KEY)) || [];
+
+localStorage.setItem(UNIT_KEY, JSON.stringify(unitData));
+
+// ===== 문제 만들기 =====
+function updateAddUnit(){
+  addUnit.innerHTML='';
+  unitData[addSubject.value].forEach(u=>{
+    addUnit.innerHTML+=`<option>${u}</option>`;
+  });
+}
+addSubject.onchange = updateAddUnit;
+updateAddUnit();
+
+saveBtn.onclick = ()=>{
+  const unit = newUnit.value || addUnit.value;
+  if(!unit || !newQ.value || !newA.value){
+    alert('모두 입력!');
+    return;
+  }
+
+  if(!unitData[addSubject.value].includes(unit)){
+    unitData[addSubject.value].push(unit);
+    localStorage.setItem(UNIT_KEY, JSON.stringify(unitData));
+    updateAddUnit();
+  }
+
+  questions.push({
+    subject:addSubject.value,
+    unit,
+    q:newQ.value,
+    answer:newA.value,
+    wrong:0
+  });
+
+  localStorage.setItem(Q_KEY, JSON.stringify(questions));
+  newQ.value=newA.value=newUnit.value='';
+  alert('저장 완료 🐼');
+};
+
+// ===== 문제 풀기 =====
+function initQuiz(){
+  quizSubject.innerHTML='';
+  Object.keys(unitData).forEach(s=>{
+    quizSubject.innerHTML+=`<option>${s}</option>`;
+  });
+  quizSubject.onchange=()=>{
+    quizUnit.innerHTML='';
+    unitData[quizSubject.value].forEach(u=>{
+      quizUnit.innerHTML+=`<option>${u}</option>`;
+    });
+  };
+  quizSubject.onchange();
+}
+initQuiz();
+
+let quizList=[], idx=0;
+
+function loadQuiz(){
+  if(!quizList.length){
+    question.textContent='문제가 없어요 🐼';
+    return;
+  }
+  question.textContent=quizList[idx].q;
+  answerInput.value='';
+  result.textContent='';
+}
+
+startUnit.onclick=()=>{
+  quizList=questions.filter(q=>q.subject===quizSubject.value&&q.unit===quizUnit.value);
+  idx=0; loadQuiz();
+};
+
+startRandom.onclick=()=>{
+  quizList=[...questions].sort(()=>Math.random()-0.5);
+  idx=0; loadQuiz();
+};
+
+checkBtn.onclick=()=>{
+  const q=quizList[idx];
+  if(answerInput.value.includes(q.answer)){
+    result.textContent='⭕ 정답!';
+    idx=(idx+1)%quizList.length;
+    setTimeout(loadQuiz,500);
+  }else{
+    result.textContent='❌ 오답';
+    q.wrong++;
+    localStorage.setItem(Q_KEY, JSON.stringify(questions));
+  }
+};
+
+// ===== 문제 보기 =====
+function renderList(){
+  list.innerHTML='';
+  questions.forEach(q=>{
+    list.innerHTML+=`${q.q} (❌ ${q.wrong})<br>`;
+  });
+}
+renderList();
+</script>
+</body>
+</html>
